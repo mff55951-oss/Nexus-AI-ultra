@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Nexus Nexus | Multi-API Mobile PRO</title>
+    <title>Nexus Nexus | AI Multi-Agent PRO</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
@@ -14,9 +14,8 @@
             theme: {
                 extend: {
                     colors: {
-                        background: '#ffffff',
-                        surface: '#f3f4f6',
                         primary: '#2563eb',
+                        surface: '#f8fafc',
                     }
                 }
             }
@@ -24,453 +23,321 @@
     </script>
 
     <style>
-        /* Mobile Performance Fixes */
-        body { -webkit-tap-highlight-color: transparent; overflow: hidden; }
-        .chat-height { height: calc(100vh - 160px); }
-        @media (max-width: 768px) { .chat-height { height: calc(100vh - 140px); } }
+        body { -webkit-tap-highlight-color: transparent; overflow: hidden; background: #ffffff; font-size: 13px; }
+        .chat-height { height: calc(100vh - 180px); }
+        .safe-area-inset { padding-bottom: max(1.2rem, env(safe-area-inset-bottom)); }
         
-        .safe-area-inset { padding-bottom: env(safe-area-inset-bottom); }
-        
-        /* Smooth Sidebar */
         #sidebar { transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
         .sidebar-open { transform: translateX(0) !important; }
+
+        /* Thought Box Style */
+        .thought-container { transition: all 0.3s ease; max-height: 40px; overflow: hidden; cursor: pointer; }
+        .thought-container.expanded { max-height: 500px; background: #f1f5f9; border-color: #cbd5e1; }
         
-        /* Custom Scrollbar for Textarea */
-        textarea::-webkit-scrollbar { width: 4px; }
-        textarea::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 4px; }
+        .animate-fade { animation: fadeIn 0.3s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
         
-        /* Glassmorphism & Animations */
-        .glass { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(10px); }
-        
-        .agent-pill { 
-            display: inline-flex; 
-            align-items: center; 
-            padding: 4px 12px; 
-            border-radius: 9999px; 
-            font-size: 11px; 
-            font-weight: 700;
-            border: 1px solid #e5e7eb;
-            margin-right: 5px;
-            white-space: nowrap;
-        }
-        .active-step { border-color: #2563eb; color: #2563eb; background: #eff6ff; animation: pulse 2s infinite; }
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .user-bubble { cursor: pointer; transition: opacity 0.2s; }
+        .user-bubble:active { opacity: 0.7; }
     </style>
 </head>
-<body class="bg-white text-slate-900 h-screen flex flex-col font-sans">
+<body class="text-slate-800 h-screen flex flex-col">
 
-    <header class="h-14 border-b border-slate-200 flex items-center justify-between px-4 sticky top-0 bg-white z-40">
-        <button onclick="toggleSidebar()" class="p-2 -ml-2 text-slate-600"><i class="ph ph-list text-2xl"></i></button>
-        <div class="flex flex-col items-center">
-            <span class="font-bold text-sm tracking-tight text-blue-600">NEXUS MULTI-CHAIN</span>
-            <span id="device-label" class="text-[10px] text-slate-400 uppercase font-bold">Mobile Optimized</span>
+    <header class="h-14 border-b border-slate-100 flex items-center justify-between px-4 sticky top-0 bg-white z-40">
+        <button onclick="toggleSidebar()" class="p-2 text-slate-500"><i class="ph ph-list text-2xl"></i></button>
+        <div class="text-center">
+            <h1 class="font-black text-xs text-blue-600 tracking-tighter">NEXUS MULTI-CHAIN</h1>
+            <p class="text-[9px] text-slate-400 font-bold uppercase">Ultra Premium v2.0</p>
         </div>
-        <button onclick="ui.openModal('settings-modal')" class="p-2 -mr-2 text-blue-600"><i class="ph ph-gear-six text-2xl"></i></button>
+        <button onclick="ui.openModal('settings-modal')" class="p-2 text-blue-600"><i class="ph ph-sliders text-2xl"></i></button>
     </header>
 
     <div class="flex flex-1 overflow-hidden relative">
         
         <aside id="sidebar" class="fixed inset-y-0 left-0 w-72 bg-slate-50 border-r border-slate-200 z-50 transform -translate-x-full lg:translate-x-0 lg:static shadow-2xl lg:shadow-none flex flex-col">
-            <div class="p-4 flex justify-between items-center lg:hidden border-b">
-                <span class="font-bold">Menu</span>
-                <button onclick="toggleSidebar()"><i class="ph ph-x text-xl"></i></button>
-            </div>
-            
-            <div class="p-4 border-b bg-white flex items-center gap-3 cursor-pointer hover:bg-slate-50 transition" onclick="ui.openModal('profile-modal')">
-                <div class="w-10 h-10 rounded-full bg-blue-100 border-2 border-blue-500 flex items-center justify-center text-blue-600 font-bold overflow-hidden" id="sidebar-avatar">
-                    <i class="ph-bold ph-user text-xl"></i>
-                </div>
+            <div class="p-5 border-b bg-white flex items-center gap-3 cursor-pointer" onclick="ui.openModal('profile-modal')">
+                <img id="user-avatar" src="https://ui-avatars.com/api/?name=Nexus+User&background=2563eb&color=fff" class="w-10 h-10 rounded-full border-2 border-blue-500 object-cover">
                 <div class="flex-1">
-                    <h3 class="font-bold text-sm text-slate-800" id="sidebar-name">Nexus User</h3>
-                    <p class="text-[10px] text-green-600 font-bold flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-green-500"></span> Online</p>
+                    <h3 id="display-name" class="font-bold text-sm">Nexus User</h3>
+                    <p id="user-role" class="text-[10px] text-slate-400">System Architect</p>
                 </div>
-                <i class="ph ph-caret-right text-slate-400"></i>
+                <i class="ph ph-caret-right text-slate-300"></i>
             </div>
 
             <div class="p-4">
-                <button onclick="app.newChat()" class="w-full py-3 bg-blue-600 text-white rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-blue-200">
-                    <i class="ph-bold ph-plus"></i> New Session
+                <button onclick="app.newChat()" class="w-full py-3 bg-blue-600 text-white rounded-2xl text-xs font-bold shadow-lg shadow-blue-100 flex items-center justify-center gap-2">
+                    <i class="ph ph-plus-circle"></i> New Session
                 </button>
             </div>
 
-            <div class="px-4 py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">Saved API Chains</div>
-            <div id="history-list" class="flex-1 overflow-y-auto px-2 pb-4"></div>
+            <div class="flex-1 overflow-y-auto px-4 space-y-2">
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Memory Chains</p>
+                <div class="text-center py-10 opacity-30">
+                    <i class="ph ph-cloud-slash text-3xl"></i>
+                    <p class="text-xs mt-2">Firebase not linked</p>
+                </div>
+            </div>
         </aside>
 
         <main class="flex-1 flex flex-col relative bg-white">
-            <div id="chat-container" class="chat-height overflow-y-auto p-4 space-y-4 scroll-smooth">
-                <div id="welcome" class="h-full flex flex-col items-center justify-center text-center p-6">
-                    <div class="w-16 h-16 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center mb-4">
-                        <i class="ph-bold ph-cpu text-3xl"></i>
-                    </div>
-                    <h1 class="text-xl font-bold text-slate-800">Ready to Orchestrate?</h1>
-                    <p class="text-sm text-slate-500 mt-2">আপনার কথাটি নিচে লিখুন, অথবা ফাইল যুক্ত করুন। এপিআই ধাপে ধাপে এটি প্রসেস করবে।</p>
+            <div id="chat-container" class="chat-height overflow-y-auto p-4 space-y-6 scroll-smooth">
+                <div id="welcome" class="h-full flex flex-col items-center justify-center text-center opacity-60">
+                    <i class="ph ph-sketch-logo text-5xl text-blue-600 mb-4"></i>
+                    <h2 class="font-bold">Ready to Orchestrate</h2>
+                    <p class="text-xs max-w-[200px] mt-1">Select an AI model and start your high-level command chain.</p>
                 </div>
             </div>
 
-            <div id="active-pills" class="hidden px-4 py-2 flex gap-2 overflow-x-auto border-t bg-slate-50 shadow-inner"></div>
-
-            <div id="attachment-preview" class="hidden px-4 py-2 bg-slate-50 border-t border-slate-100 flex gap-2 overflow-x-auto"></div>
-
-            <div class="p-4 bg-white border-t border-slate-100 safe-area-inset">
-                <div class="max-w-4xl mx-auto flex gap-2 items-end">
-                    
-                    <button onclick="document.getElementById('file-upload').click()" class="h-11 w-11 bg-slate-100 text-slate-600 rounded-xl flex items-center justify-center hover:bg-slate-200 transition-colors shrink-0">
-                        <i class="ph-bold ph-paperclip text-xl"></i>
-                    </button>
-                    <input type="file" id="file-upload" class="hidden" multiple onchange="app.handleFiles(this)">
-
-                    <div class="flex-1 bg-slate-100 rounded-2xl px-4 py-2 flex items-center border border-slate-200 focus-within:border-blue-500 transition-all">
-                        <textarea id="user-input" rows="1" class="w-full bg-transparent border-none outline-none text-sm py-1 max-h-[40vh] overflow-y-auto resize-none" placeholder="আপনার প্রশ্ন বা কমান্ড লিখুন..." oninput="autoResize(this)"></textarea>
+            <div class="p-3 bg-white border-t border-slate-100 safe-area-inset">
+                <div class="max-w-4xl mx-auto space-y-2">
+                    <div class="flex items-center gap-2 px-1">
+                        <select id="api-selector" class="text-[10px] font-bold bg-slate-100 border-none rounded-lg px-2 py-1 outline-none text-slate-600 uppercase">
+                            </select>
+                        <span class="text-[9px] text-green-500 font-bold uppercase flex items-center gap-1"><span class="w-1.5 h-1.5 bg-green-500 rounded-full"></span> Neural Engine Active</span>
                     </div>
 
-                    <button id="send-btn" onclick="app.startChain()" class="h-11 w-11 bg-blue-600 text-white rounded-xl flex items-center justify-center shadow-md active:scale-95 transition-transform shrink-0">
-                        <i class="ph-bold ph-paper-plane-right text-xl"></i>
-                    </button>
+                    <div class="flex items-end gap-2 bg-slate-50 border border-slate-200 rounded-2xl p-2 focus-within:border-blue-400 transition-all">
+                        <button onclick="document.getElementById('file-input').click()" class="p-2 text-slate-400 hover:text-blue-600"><i class="ph-bold ph-paperclip text-xl"></i></button>
+                        <input type="file" id="file-input" class="hidden" multiple onchange="app.handleFiles(this)">
+                        
+                        <textarea id="user-input" rows="1" class="flex-1 bg-transparent border-none outline-none text-sm py-2 resize-none max-h-40" placeholder="Ask anything... (Long press my messages to edit)" oninput="autoResize(this)"></textarea>
+                        
+                        <button id="send-btn" onclick="app.sendMessage()" class="bg-blue-600 text-white p-2.5 rounded-xl shadow-md active:scale-95 transition-transform">
+                            <i class="ph-bold ph-paper-plane-right text-xl"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
         </main>
     </div>
 
-    <div id="profile-modal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-end lg:items-center justify-center p-0 lg:p-4">
-        <div class="bg-white w-full max-w-sm rounded-t-3xl lg:rounded-3xl shadow-2xl overflow-hidden transform transition-all">
-            <div class="p-5 border-b flex justify-between items-center bg-slate-50">
-                <h3 class="font-bold text-lg">User Profile</h3>
-                <button onclick="ui.closeModal('profile-modal')" class="p-2 bg-slate-200 rounded-full"><i class="ph ph-x"></i></button>
+    <div id="profile-modal" class="hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-sm rounded-3xl overflow-hidden animate-fade">
+            <div class="p-4 border-b flex justify-between items-center">
+                <h3 class="font-bold">My Profile</h3>
+                <button onclick="ui.closeModal('profile-modal')"><i class="ph ph-x"></i></button>
             </div>
-            <div class="p-5 space-y-4">
-                <div class="flex justify-center mb-4">
-                    <div class="w-24 h-24 rounded-full bg-slate-100 border-4 border-blue-100 flex items-center justify-center text-blue-500 text-3xl relative">
-                        <i class="ph-fill ph-user"></i>
-                        <button class="absolute bottom-0 right-0 bg-blue-600 text-white p-2 rounded-full shadow-md"><i class="ph-bold ph-camera text-xs"></i></button>
+            <div class="p-6 space-y-4 text-center">
+                <div class="relative inline-block">
+                    <img id="profile-img-preview" src="https://ui-avatars.com/api/?name=Nexus+User" class="w-20 h-20 rounded-full border-4 border-blue-50 object-cover mx-auto">
+                    <button class="absolute bottom-0 right-0 bg-blue-600 text-white p-1.5 rounded-full border-2 border-white"><i class="ph ph-camera text-xs"></i></button>
+                </div>
+                <div class="space-y-3 text-left">
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-400 uppercase">Avatar URL</label>
+                        <input type="text" id="avatar-url-input" class="w-full mt-1 p-2.5 bg-slate-50 border rounded-xl text-xs outline-none focus:border-blue-500" placeholder="https://image.com/my-pic.jpg">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-400 uppercase">Full Name</label>
+                        <input type="text" id="name-input" class="w-full mt-1 p-2.5 bg-slate-50 border rounded-xl text-xs font-bold outline-none" value="Nexus User">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-400 uppercase">Role / Bio</label>
+                        <input type="text" id="role-input" class="w-full mt-1 p-2.5 bg-slate-50 border rounded-xl text-xs outline-none" value="System Architect">
                     </div>
                 </div>
-                <div>
-                    <label class="text-xs font-bold text-slate-500 uppercase">Display Name</label>
-                    <input type="text" id="profile-name-input" value="Nexus User" class="w-full mt-1 p-3 bg-slate-50 border rounded-xl font-semibold outline-none focus:border-blue-500">
+                <div class="pt-4 space-y-2">
+                    <button onclick="app.saveProfile()" class="w-full py-3 bg-blue-600 text-white rounded-xl font-bold text-xs shadow-lg">Save Profile</button>
+                    <button onclick="app.generateDevAPI()" class="w-full py-3 bg-slate-100 text-slate-600 rounded-xl font-bold text-xs">Generate System API Key</button>
                 </div>
-                <div>
-                    <label class="text-xs font-bold text-slate-500 uppercase">Role / Title</label>
-                    <input type="text" value="System Admin" class="w-full mt-1 p-3 bg-slate-50 border rounded-xl text-sm outline-none focus:border-blue-500">
-                </div>
-            </div>
-            <div class="p-4 border-t bg-slate-50">
-                <button onclick="app.saveProfile()" class="w-full py-3 bg-slate-900 text-white rounded-xl font-bold">Save Profile</button>
             </div>
         </div>
     </div>
 
-    <div id="settings-modal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-end lg:items-center justify-center p-0 lg:p-4">
-        <div class="bg-white w-full max-w-lg rounded-t-3xl lg:rounded-3xl shadow-2xl max-h-[90vh] flex flex-col overflow-hidden">
-            <div class="p-5 border-b flex justify-between items-center bg-slate-50 sticky top-0 z-10">
-                <h3 class="font-bold text-lg">API & Device Settings</h3>
-                <button onclick="ui.closeModal('settings-modal')" class="p-2 bg-slate-200 rounded-full"><i class="ph ph-x"></i></button>
+    <div id="settings-modal" class="hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-md rounded-3xl overflow-hidden flex flex-col max-h-[80vh]">
+            <div class="p-4 border-b flex justify-between items-center bg-slate-50">
+                <h3 class="font-bold">API Management</h3>
+                <button onclick="ui.closeModal('settings-modal')"><i class="ph ph-x"></i></button>
             </div>
-            
-            <div class="overflow-y-auto p-5 space-y-6">
-                <div class="bg-blue-50 p-4 rounded-2xl border border-blue-100">
-                    <label class="block text-xs font-bold text-blue-700 uppercase mb-2">Target Device Performance</label>
-                    <select id="device-type" onchange="app.updateDevice()" class="w-full p-3 rounded-xl border-none shadow-sm text-sm font-semibold outline-none cursor-pointer">
-                        <option value="mobile">📱 Mobile (Smooth Mode)</option>
-                        <option value="pc">💻 PC (High Performance)</option>
-                    </select>
+            <div id="api-list" class="flex-1 overflow-y-auto p-4 space-y-3">
                 </div>
-
-                <div class="flex justify-between items-end">
-                    <h4 class="font-bold text-slate-700">API Chain Configuration</h4>
-                    <span class="text-xs bg-slate-200 px-2 py-1 rounded-md text-slate-600 font-bold" id="api-count">0 APIs</span>
-                </div>
-
-                <div id="api-list-container" class="space-y-4">
-                    </div>
-
-                <button onclick="app.addMoreAPI()" class="w-full py-4 border-2 border-dashed border-slate-300 bg-slate-50 rounded-2xl text-slate-600 font-bold text-sm hover:border-blue-500 hover:text-blue-600 hover:bg-blue-50 transition-all flex items-center justify-center gap-2">
-                    <i class="ph-bold ph-plus-circle text-lg"></i> Add New API Node
-                </button>
-            </div>
-
-            <div class="p-4 border-t bg-slate-50 sticky bottom-0">
-                <button onclick="app.saveSettings()" class="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold shadow-lg shadow-blue-200 transition-colors">Save Everything</button>
+            <div class="p-4 border-t bg-slate-50 flex gap-2">
+                <button onclick="app.addAPI()" class="flex-1 py-3 border-2 border-dashed border-slate-300 rounded-xl text-xs font-bold text-slate-500">Add Model</button>
+                <button onclick="ui.closeModal('settings-modal')" class="flex-1 py-3 bg-slate-900 text-white rounded-xl text-xs font-bold">Apply</button>
             </div>
         </div>
     </div>
 
     <script>
-        // --- State Management ---
+        // --- Core State ---
         let store = {
-            device: 'mobile',
-            userName: 'Nexus User',
-            attachments: [],
+            user: { name: 'Nexus User', role: 'System Architect', avatar: 'https://ui-avatars.com/api/?name=Nexus+User&background=2563eb&color=fff' },
             apis: [
-                { id: 0, name: 'Main Orchestrator', key: '', division: 'General Processing' },
-                { id: 1, name: 'Text Analyst', key: '', division: 'Data Analysis' }
+                { id: 1, name: 'GPT-4o Omni', key: '', provider: 'OpenAI' },
+                { id: 2, name: 'Claude 3.5', key: '', provider: 'Anthropic' }
             ],
-            divisions: ['General Processing', 'Text Generation', 'Image Processing', 'Data Analysis', 'Web Scraping', 'Final Review']
+            editingId: null
         };
 
         const app = {
             init: () => {
-                const saved = localStorage.getItem('nexus_mobile_config_pro');
-                if (saved) store = { ...store, ...JSON.parse(saved) };
-                
-                // Initialize UI
-                document.getElementById('sidebar-name').innerText = store.userName;
-                document.getElementById('profile-name-input').value = store.userName;
-                
-                app.renderAPISettings();
-                app.updateDevice();
+                app.renderAPIs();
+                app.updateUI();
             },
 
-            // --- API Configuration Logic ---
-            renderAPISettings: () => {
-                const container = document.getElementById('api-list-container');
-                document.getElementById('api-count').innerText = `${store.apis.length} APIs`;
+            updateUI: () => {
+                document.getElementById('display-name').innerText = store.user.name;
+                document.getElementById('user-role').innerText = store.user.role;
+                document.getElementById('user-avatar').src = store.user.avatar;
+                document.getElementById('profile-img-preview').src = store.user.avatar;
                 
-                container.innerHTML = store.apis.map((api, index) => `
-                    <div class="p-4 bg-white border border-slate-200 shadow-sm rounded-2xl relative group transition-all focus-within:border-blue-400">
-                        ${index > 0 ? `<button onclick="app.removeAPI(${index})" class="absolute -top-2 -right-2 bg-red-100 text-red-600 rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"><i class="ph-bold ph-x text-xs"></i></button>` : ''}
-                        
-                        <div class="flex flex-col gap-3">
-                            <div class="flex justify-between items-center border-b pb-2">
-                                <input type="text" value="${api.name}" onchange="app.updateAPIData(${index}, 'name', this.value)" 
-                                    class="bg-transparent font-bold text-sm border-none outline-none text-blue-700 w-full" placeholder="API Node Name">
-                            </div>
-                            
-                            <div class="grid grid-cols-1 gap-2">
-                                <label class="text-[10px] font-bold text-slate-400 uppercase">Division / Role</label>
-                                <select onchange="app.updateAPIData(${index}, 'division', this.value)" class="w-full p-2 text-sm bg-slate-50 border rounded-lg outline-none focus:border-blue-400 cursor-pointer">
-                                    ${store.divisions.map(div => `<option value="${div}" ${api.division === div ? 'selected' : ''}>${div}</option>`).join('')}
-                                </select>
-                            </div>
+                const selector = document.getElementById('api-selector');
+                selector.innerHTML = store.apis.map(a => `<option value="${a.id}">${a.name}</option>`).join('');
+            },
 
-                            <div>
-                                <input type="password" value="${api.key}" onchange="app.updateAPIData(${index}, 'key', this.value)"
-                                    class="w-full p-2 text-sm border rounded-lg bg-slate-50 outline-none focus:border-blue-400 focus:bg-white transition-colors" placeholder="Paste API Key here...">
-                            </div>
+            renderAPIs: () => {
+                const container = document.getElementById('api-list');
+                container.innerHTML = store.apis.map((api, i) => `
+                    <div class="p-3 border rounded-2xl space-y-2">
+                        <div class="flex justify-between items-center">
+                            <input class="font-bold text-xs outline-none text-blue-600" value="${api.name}" onchange="store.apis[${i}].name=this.value">
+                            <button onclick="app.removeAPI(${i})" class="text-red-400"><i class="ph ph-trash"></i></button>
                         </div>
+                        <input type="password" placeholder="Paste API Key here..." class="w-full p-2 bg-slate-50 rounded-lg text-[10px] outline-none border focus:border-blue-400" value="${api.key}" onchange="store.apis[${i}].key=this.value">
                     </div>
                 `).join('');
             },
 
-            updateAPIData: (index, field, value) => {
-                store.apis[index][field] = value;
+            addAPI: () => {
+                store.apis.push({ id: Date.now(), name: 'New AI Model', key: '', provider: 'Custom' });
+                app.renderAPIs();
+                app.updateUI();
             },
 
-            addMoreAPI: () => {
-                store.apis.push({ id: Date.now(), name: `Agent ${store.apis.length + 1}`, key: '', division: 'General Processing' });
-                app.renderAPISettings();
-                // Scroll to bottom of modal
-                const modalBody = document.querySelector('#settings-modal .overflow-y-auto');
-                setTimeout(() => modalBody.scrollTo(0, modalBody.scrollHeight), 50);
-            },
-
-            removeAPI: (index) => {
-                store.apis.splice(index, 1);
-                app.renderAPISettings();
-            },
-
-            saveSettings: () => {
-                localStorage.setItem('nexus_mobile_config_pro', JSON.stringify({ device: store.device, apis: store.apis, userName: store.userName }));
-                ui.closeModal('settings-modal');
+            removeAPI: (i) => {
+                store.apis.splice(i, 1);
+                app.renderAPIs();
+                app.updateUI();
             },
 
             saveProfile: () => {
-                const name = document.getElementById('profile-name-input').value || 'Nexus User';
-                store.userName = name;
-                document.getElementById('sidebar-name').innerText = name;
-                localStorage.setItem('nexus_mobile_config_pro', JSON.stringify({ device: store.device, apis: store.apis, userName: store.userName }));
+                store.user.name = document.getElementById('name-input').value;
+                store.user.role = document.getElementById('role-input').value;
+                const avatarInput = document.getElementById('avatar-url-input').value;
+                if(avatarInput) store.user.avatar = avatarInput;
+                
+                app.updateUI();
                 ui.closeModal('profile-modal');
             },
 
-            updateDevice: () => {
-                const type = document.getElementById('device-type').value;
-                store.device = type;
-                document.getElementById('device-label').innerText = type === 'mobile' ? 'Mobile Optimized' : 'Desktop Mode';
+            generateDevAPI: () => {
+                const key = 'nx-' + Math.random().toString(36).substr(2, 16).toUpperCase();
+                alert(`Your System API Key Generated:\n\n${key}\n\nUse this to connect your website modules.`);
             },
 
-            // --- File Upload Logic ---
-            handleFiles: (input) => {
-                const files = Array.from(input.files);
-                if (files.length === 0) return;
-
-                store.attachments = [...store.attachments, ...files];
-                app.renderAttachmentPreview();
-                input.value = ''; // Reset input
-            },
-
-            removeAttachment: (index) => {
-                store.attachments.splice(index, 1);
-                app.renderAttachmentPreview();
-            },
-
-            renderAttachmentPreview: () => {
-                const container = document.getElementById('attachment-preview');
-                if (store.attachments.length === 0) {
-                    container.classList.add('hidden');
-                    return;
-                }
-                
-                container.classList.remove('hidden');
-                container.innerHTML = store.attachments.map((file, index) => {
-                    const isImage = file.type.startsWith('image/');
-                    const isVideo = file.type.startsWith('video/');
-                    let icon = 'ph-file';
-                    if(isImage) icon = 'ph-image';
-                    if(isVideo) icon = 'ph-video';
-
-                    return `
-                        <div class="relative flex items-center gap-2 bg-white border border-slate-200 px-3 py-1.5 rounded-xl text-xs font-medium shadow-sm shrink-0">
-                            <i class="ph ${icon} text-blue-500 text-lg"></i>
-                            <span class="max-w-[80px] truncate">${file.name}</span>
-                            <button onclick="app.removeAttachment(${index})" class="ml-1 text-slate-400 hover:text-red-500"><i class="ph-bold ph-x"></i></button>
-                        </div>
-                    `;
-                }).join('');
-            },
-
-            // --- Chat & Chain Logic ---
-            startChain: async () => {
-                const inputEl = document.getElementById('user-input');
-                const text = inputEl.value.trim();
-                const hasFiles = store.attachments.length > 0;
-
-                if (!text && !hasFiles) return;
+            // --- Chat Logic ---
+            sendMessage: async () => {
+                const input = document.getElementById('user-input');
+                const text = input.value.trim();
+                if(!text) return;
 
                 document.getElementById('welcome')?.classList.add('hidden');
-                
-                // Add user message to UI
-                let userMsgContent = text;
-                if(hasFiles) {
-                    userMsgContent += `<br><div class="text-xs text-blue-200 mt-2 border-t border-blue-500/30 pt-1">📎 ${store.attachments.length} files attached</div>`;
+
+                if(store.editingId) {
+                    // Update existing message logic if needed, currently just appends new
+                    ui.appendMsg('user', text + ' (Edited)');
+                    store.editingId = null;
+                } else {
+                    ui.appendMsg('user', text);
                 }
-                ui.appendMsg('user', userMsgContent);
+
+                input.value = '';
+                input.style.height = 'auto';
+
+                // AI Response Simulation
+                const selectedApi = store.apis.find(a => a.id == document.getElementById('api-selector').value);
                 
-                // Reset Inputs
-                inputEl.value = '';
-                inputEl.style.height = 'auto';
-                store.attachments = [];
-                app.renderAttachmentPreview();
+                // Show thinking then show main answer
+                const botMsgId = ui.appendBotMsg(selectedApi.name);
                 
-                // Setup Chain UI
-                const pillContainer = document.getElementById('active-pills');
-                pillContainer.classList.remove('hidden');
-                pillContainer.innerHTML = store.apis.map(api => `
-                    <span class="agent-pill" id="pill-${api.id}">
-                        ${api.name} <span class="font-normal text-[9px] opacity-70 ml-1">(${api.division})</span>
-                    </span>
-                `).join('');
+                await new Promise(r => setTimeout(r, 2000)); // Simulate delay
+                
+                ui.updateBotMsg(botMsgId, 
+                    "আপনার ইনপুটটি প্রসেস করা হয়েছে। ফায়ারবেস কানেকশন ছাড়া ডাটা ক্লাউডে যাবে না।", 
+                    `🧠 প্রসেসিং ডাটা: ${selectedApi.name} এপিআই ব্যবহার করা হয়েছে। \nস্টেটাস: সাকসেসফুল। \nমেমোরি: লোকাল।`
+                );
+            },
 
-                let lastOutput = text || "Processing files...";
+            newChat: () => {
+                document.getElementById('chat-container').innerHTML = '';
+                app.updateUI();
+                if(window.innerWidth < 1024) toggleSidebar();
+            },
 
-                // Chain Processing System with ERROR HANDLING
-                try {
-                    for (let i = 0; i < store.apis.length; i++) {
-                        const api = store.apis[i];
-                        const pill = document.getElementById(`pill-${api.id}`);
-                        pill.classList.add('active-step');
-
-                        // Simulate API Delay
-                        await new Promise(r => setTimeout(r, 1200)); 
-
-                        // ==========================================
-                        // ERROR HANDLING SIMULATION (আপনার শর্ত অনুযায়ী)
-                        // ==========================================
-                        // যদি ইউজার "error" লেখে, বা কোনো কারণে সার্ভার ফেইল করে (এখানে আমি রেন্ডম 10% চান্স দিয়েছি ডেমোর জন্য)
-                        const simulateError = text.toLowerCase() === 'error' || Math.random() < 0.10; 
-                        
-                        if (simulateError) {
-                            throw new Error("Server malfunction"); // থ্রো করলে সোজা catch ব্লকে চলে যাবে
-                        }
-
-                        // Success Simulation
-                        lastOutput = `[${api.division}]: ডেটা প্রসেস হয়েছে। ${lastOutput.substring(0, 30)}...`;
-
-                        pill.classList.remove('active-step');
-                        pill.classList.add('bg-green-50', 'text-green-700', 'border-green-200');
-                    }
-                    
-                    // Final Success Message
-                    ui.appendMsg('bot', `**ফাইনাল রেজাল্ট:**\n\n${lastOutput}\n\n*সবগুলো এপিআই সফলভাবে কাজ সম্পন্ন করেছে।*`);
-
-                } catch (error) {
-                    // ==========================================
-                    // EXACT ERROR MESSAGE (আপনার দেওয়া টেক্সট)
-                    // ==========================================
-                    ui.appendMsg('bot', 'আমি আপনার কাজটি করতে পারছিনা আমার সার্ভারে একটু সমস্যা হয়েছে।');
-                    
-                    // Error UI update
-                    const activePills = document.querySelectorAll('.active-step');
-                    activePills.forEach(p => {
-                        p.classList.remove('active-step');
-                        p.classList.add('bg-red-50', 'text-red-600', 'border-red-200');
-                    });
-                } finally {
-                    setTimeout(() => { pillContainer.classList.add('hidden'); }, 3000);
-                }
+            handleEdit: (el) => {
+                const oldText = el.querySelector('.msg-text').innerText;
+                const input = document.getElementById('user-input');
+                input.value = oldText;
+                input.focus();
+                store.editingId = Date.now();
+                ui.showToast('এডিট মোড সক্রিয়');
             }
         };
 
         const ui = {
             openModal: (id) => document.getElementById(id).classList.remove('hidden'),
             closeModal: (id) => document.getElementById(id).classList.add('hidden'),
+            
             appendMsg: (role, text) => {
                 const container = document.getElementById('chat-container');
                 const div = document.createElement('div');
-                div.className = `flex ${role === 'user' ? 'justify-end' : 'justify-start'} mb-4 animate-fade-in`;
-                
-                // Styling based on role
-                const bgClass = role === 'user' ? 'bg-blue-600 text-white shadow-md shadow-blue-200' : 'bg-slate-100 text-slate-800 shadow-sm border border-slate-200';
-                
+                div.className = `flex justify-end mb-4 animate-fade`;
                 div.innerHTML = `
-                    <div class="${bgClass} p-4 rounded-2xl max-w-[85%] text-sm leading-relaxed overflow-hidden break-words">
-                        ${marked.parse(text)}
+                    <div class="user-bubble bg-blue-600 text-white p-3 rounded-2xl rounded-tr-sm max-w-[85%] shadow-md" onclick="app.handleEdit(this)">
+                        <p class="msg-text text-xs">${text}</p>
                     </div>
                 `;
                 container.appendChild(div);
-                container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
+                container.scrollTo(0, container.scrollHeight);
+            },
+
+            appendBotMsg: (aiName) => {
+                const id = 'bot-' + Date.now();
+                const container = document.getElementById('chat-container');
+                const div = document.createElement('div');
+                div.id = id;
+                div.className = `flex flex-col mb-4 animate-fade`;
+                div.innerHTML = `
+                    <div class="max-w-[90%] space-y-2">
+                        <span class="text-[9px] font-black text-blue-500 uppercase tracking-tighter ml-1">${aiName}</span>
+                        <div class="thought-container border border-slate-200 bg-slate-50 p-2 rounded-xl text-[10px] text-slate-500 italic flex items-center gap-2" onclick="this.classList.toggle('expanded')">
+                            <i class="ph ph-brain"></i>
+                            <span class="thought-text">চিন্তা করছে... (ক্লিক করে দেখুন)</span>
+                        </div>
+                        <div class="main-answer bg-white border border-slate-100 p-3 rounded-2xl shadow-sm text-xs leading-relaxed">
+                            <div class="h-2 w-10 bg-slate-200 animate-pulse rounded"></div>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(div);
+                container.scrollTo(0, container.scrollHeight);
+                return id;
+            },
+
+            updateBotMsg: (id, answer, thoughts) => {
+                const el = document.getElementById(id);
+                el.querySelector('.thought-text').innerText = thoughts;
+                el.querySelector('.main-answer').innerHTML = marked.parse(answer);
+            },
+
+            showToast: (msg) => {
+                const t = document.createElement('div');
+                t.className = 'fixed bottom-24 left-1/2 -translate-x-1/2 bg-slate-800 text-white px-4 py-2 rounded-full text-[10px] z-[100] animate-bounce';
+                t.innerText = msg;
+                document.body.appendChild(t);
+                setTimeout(() => t.remove(), 2000);
             }
         };
 
-        function toggleSidebar() {
-            document.getElementById('sidebar').classList.toggle('sidebar-open');
-        }
+        function toggleSidebar() { document.getElementById('sidebar').classList.toggle('sidebar-open'); }
 
-        // Auto Resize Textarea for Unlimited Input
         function autoResize(textarea) {
             textarea.style.height = 'auto';
             textarea.style.height = textarea.scrollHeight + 'px';
-            // Limit height to avoid taking over the whole screen is handled by Tailwind class max-h-[40vh]
         }
 
-        // Initialize App
         app.init();
-    </script>
-    <style>
-        .animate-fade-in { animation: fadeIn 0.3s ease-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-    </style>
-    <script type="module">
-  // Import the functions you need from the SDKs you need
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js";
-  import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-analytics.js";
-  // TODO: Add SDKs for Firebase products that you want to use
-  // https://firebase.google.com/docs/web/setup#available-libraries
-
-  // Your web app's Firebase configuration
-  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
-  const firebaseConfig = {
-    apiKey: "AIzaSyB3vwnLRimr8Pq6ieGNlsNmKAmPf2_2OQg",
-    authDomain: "nexus-ai-14d22.firebaseapp.com",
-    projectId: "nexus-ai-14d22",
-    storageBucket: "nexus-ai-14d22.firebasestorage.app",
-    messagingSenderId: "705260616991",
-    appId: "1:705260616991:web:48b1ee731d7e792e3b442a",
-    measurementId: "G-1C2BRE6JVG"
-  };
-
-  // Initialize Firebase
-  const app = initializeApp(firebaseConfig);
-  const analytics = getAnalytics(app);
     </script>
 </body>
 </html>
