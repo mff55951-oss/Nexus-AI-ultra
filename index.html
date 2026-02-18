@@ -1,41 +1,43 @@
 <!DOCTYPE html>
-<html lang="bn">
+<html lang="en" class="antialiased">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nexus Pro | Advanced AI Client</title>
+    <title>Universal AI Chat</title>
     
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/@phosphor-icons/web"></script>
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
-
+    <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
     <script>
         tailwind.config = {
+            darkMode: 'class',
             theme: {
                 extend: {
                     colors: {
-                        background: '#f8fafc',
-                        surface: '#ffffff',
-                        primary: '#2563eb',
-                        secondary: '#64748b',
-                        danger: '#ef4444',
+                        gray: {
+                            850: '#1f2937',
+                            900: '#111827',
+                            950: '#030712',
+                        }
                     },
-                    fontFamily: { sans: ['Inter', 'sans-serif'] },
-                    animation: {
-                        'slide-up': 'slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-                        'fade-in': 'fadeIn 0.2s ease-out',
-                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite'
-                    },
-                    keyframes: {
-                        slideUp: {
-                            '0%': { opacity: 0, transform: 'translateY(10px)' },
-                            '100%': { opacity: 1, transform: 'translateY(0)' }
-                        },
-                        fadeIn: {
-                            '0%': { opacity: 0 },
-                            '100%': { opacity: 1 }
+                    typography: {
+                        DEFAULT: {
+                            css: {
+                                maxWidth: '100%',
+                                pre: {
+                                    backgroundColor: '#1f2937',
+                                    color: '#f8fafc',
+                                    borderRadius: '0.75rem',
+                                    padding: '1rem',
+                                },
+                                code: {
+                                    color: '#ef4444',
+                                    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                                    padding: '0.2rem 0.4rem',
+                                    borderRadius: '0.25rem',
+                                    fontWeight: '500',
+                                },
+                                'code::before': { content: '""' },
+                                'code::after': { content: '""' }
+                            }
                         }
                     }
                 }
@@ -43,603 +45,677 @@
         }
     </script>
 
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
     <style>
+        /* Base Scrollbar Styling */
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .dark ::-webkit-scrollbar-thumb { background: #475569; }
         ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .dark ::-webkit-scrollbar-thumb:hover { background: #334155; }
         
-        .prose pre { background: #f1f5f9; border-radius: 8px; padding: 1rem; margin: 0.5rem 0; overflow-x: auto; border: 1px solid #e2e8f0; }
-        .prose code { color: #d946ef; font-family: 'Fira Code', monospace; font-size: 0.85em; }
-        .typing-indicator span { animation: blink 1.4s infinite both; }
-        .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
-        .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
-        @keyframes blink { 0% { opacity: 0.2; } 20% { opacity: 1; } 100% { opacity: 0.2; } }
+        /* Hide scrollbar for textarea */
+        textarea::-webkit-scrollbar { display: none; }
+        textarea { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        /* Smooth transitions */
+        .transition-theme { transition: background-color 0.3s ease, color 0.3s ease; }
+        
+        /* Typing indicator cursor */
+        .generating .message-content > *:last-child::after {
+            content: '▋';
+            display: inline-block;
+            vertical-align: text-bottom;
+            animation: blink 1s step-start infinite;
+            margin-left: 4px;
+            color: #3b82f6;
+        }
+        @keyframes blink { 50% { opacity: 0; } }
+        
+        /* Markdown override fixes */
+        .prose p:last-child { margin-bottom: 0; }
     </style>
 </head>
-<body class="bg-background text-slate-800 h-screen flex overflow-hidden font-sans">
+<body class="min-h-screen flex bg-gray-50 text-gray-800 transition-theme dark:bg-gray-950 dark:text-gray-100">
 
-    <aside id="sidebar" class="w-80 bg-surface border-r border-slate-200 flex flex-col transition-transform duration-300 absolute md:relative z-30 h-full -translate-x-full md:translate-x-0 shadow-xl md:shadow-none">
-        <div class="p-4 border-b border-slate-100 flex justify-between items-center">
-            <div class="flex items-center gap-2 font-bold text-xl text-slate-800">
-                <div class="w-8 h-8 rounded-lg bg-primary text-white flex items-center justify-center">
-                    <i class="ph-bold ph-lightning"></i>
-                </div>
-                Nexus<span class="text-primary">Pro</span>
-            </div>
-            <button onclick="Nexus.ui.toggleSidebar()" class="md:hidden text-slate-500"><i class="ph-bold ph-x"></i></button>
-        </div>
-
-        <div class="p-3">
-            <button onclick="Nexus.chat.newChat()" class="w-full py-3 px-4 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl flex items-center gap-3 transition-all group shadow-sm">
-                <i class="ph-bold ph-plus text-primary"></i>
-                <span class="font-medium text-slate-700">New Chat</span>
-            </button>
-        </div>
-
-        <div id="history-list" class="flex-1 overflow-y-auto px-3 py-2 space-y-1">
-            </div>
-
-        <div class="p-3 border-t border-slate-100 bg-slate-50/50">
-            <button onclick="Nexus.ui.openModal('settings-modal')" class="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-white transition-colors text-slate-600">
-                <i class="ph-duotone ph-gear-six text-xl"></i>
-                <div class="text-left">
-                    <div class="text-sm font-semibold">Settings & Keys</div>
-                    <div class="text-[10px] text-slate-500">Manage Profiles</div>
-                </div>
-            </button>
-        </div>
-    </aside>
-
-    <main class="flex-1 flex flex-col relative w-full h-full bg-slate-50/50">
-        
-        <header class="h-16 bg-surface/80 backdrop-blur-md border-b border-slate-200 flex items-center justify-between px-4 md:px-6 z-20 sticky top-0">
-            <div class="flex items-center gap-3">
-                <button onclick="Nexus.ui.toggleSidebar()" class="md:hidden p-2 text-slate-500 rounded-lg hover:bg-slate-100"><i class="ph-bold ph-list text-xl"></i></button>
-                
-                <div class="relative group" id="api-selector-container">
-                    <button onclick="document.getElementById('api-dropdown').classList.toggle('hidden')" class="flex items-center gap-2 bg-white border border-slate-200 px-3 py-1.5 rounded-full text-sm font-medium hover:border-primary transition-colors shadow-sm">
-                        <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-                        <span id="header-model-name">Select Model</span>
-                        <i class="ph-bold ph-caret-down text-xs text-slate-400"></i>
-                    </button>
-                    <div id="api-dropdown" class="hidden absolute top-full left-0 mt-2 w-64 bg-white border border-slate-200 rounded-xl shadow-xl py-1 z-50">
-                        <div id="api-list" class="max-h-64 overflow-y-auto"></div>
-                        <div class="border-t border-slate-100 mt-1 pt-1">
-                            <button onclick="Nexus.ui.openModal('settings-modal'); document.getElementById('api-dropdown').classList.add('hidden')" class="w-full text-left px-4 py-2 text-xs font-bold text-primary hover:bg-slate-50 flex items-center gap-2">
-                                <i class="ph-bold ph-plus-circle"></i> Add New Profile
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="flex items-center gap-2">
-                <div id="token-display" class="hidden md:flex flex-col items-end mr-2">
-                    <span class="text-[10px] font-mono text-slate-400">TOKENS</span>
-                    <span class="text-xs font-bold text-slate-600" id="token-count">0</span>
-                </div>
-                <button onclick="Nexus.chat.clearContext()" class="p-2 text-slate-400 hover:text-red-500 rounded-lg transition-colors" title="Clear Conversation"><i class="ph-bold ph-trash"></i></button>
-            </div>
-        </header>
-
-        <div id="chat-view" class="flex-1 overflow-y-auto p-4 md:p-8 space-y-6 scroll-smooth">
-            <div id="welcome-state" class="h-full flex flex-col items-center justify-center opacity-60">
-                <div class="w-24 h-24 bg-white rounded-2xl shadow-lg flex items-center justify-center mb-6 animate-pulse-slow">
-                    <i class="ph-duotone ph-brain text-5xl text-primary"></i>
-                </div>
-                <h2 class="text-2xl font-bold text-slate-800">Ready to Assist</h2>
-                <p class="text-slate-500 mt-2">Select a profile and start building.</p>
-            </div>
-        </div>
-
-        <div class="p-4 md:p-6 bg-surface border-t border-slate-200 relative">
-            
-            <div id="stop-btn-container" class="absolute -top-12 left-1/2 -translate-x-1/2 hidden">
-                <button onclick="Nexus.chat.abortGeneration()" class="flex items-center gap-2 bg-white border border-slate-200 text-slate-700 px-4 py-2 rounded-full shadow-lg text-sm font-semibold hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-all">
-                    <i class="ph-fill ph-stop-circle"></i> Stop Generating
-                </button>
-            </div>
-
-            <div class="max-w-4xl mx-auto relative group">
-                <div class="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-3xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                <div class="relative bg-slate-50 border border-slate-300 rounded-3xl shadow-sm focus-within:ring-2 focus-within:ring-primary/30 focus-within:border-primary transition-all flex flex-col">
-                    <textarea id="user-input" rows="1" class="w-full bg-transparent text-base text-slate-800 placeholder-slate-400 px-5 py-4 pr-14 outline-none resize-none max-h-[400px]" placeholder="Type your message here..." oninput="Nexus.ui.autoResize(this)"></textarea>
-                    
-                    <div class="px-5 pb-2 flex justify-between items-center text-[10px] text-slate-400">
-                        <span>Markdown Supported</span>
-                        <span id="latency-meter">Lat: -ms</span>
-                    </div>
-
-                    <button id="send-btn" onclick="Nexus.chat.sendMessage()" class="absolute right-2 bottom-3 p-2.5 bg-primary hover:bg-blue-600 text-white rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-md">
-                        <i class="ph-bold ph-paper-plane-right text-lg"></i>
-                    </button>
-                </div>
-            </div>
-            <div class="text-center mt-2 text-[10px] text-slate-400">
-                Encrypted Local Storage • Client-Side Only
-            </div>
-        </div>
-    </main>
-
-    <div id="settings-modal" class="hidden fixed inset-0 bg-slate-900/20 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-        <div class="bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-slide-up">
-            <div class="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                <h3 class="font-bold text-slate-800 text-lg flex items-center gap-2"><i class="ph-bold ph-sliders-horizontal"></i> Configuration</h3>
-                <button onclick="Nexus.ui.closeModal('settings-modal')" class="text-slate-400 hover:text-slate-800"><i class="ph-bold ph-x text-lg"></i></button>
-            </div>
-            
-            <div class="overflow-y-auto p-6 space-y-8">
-                
-                <div class="bg-blue-50/50 p-5 rounded-xl border border-blue-100 space-y-4">
-                    <h4 class="text-xs font-bold text-primary uppercase tracking-wider flex items-center gap-2"><i class="ph-bold ph-plus"></i> Add Profile</h4>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-500 mb-1">Name</label>
-                            <input type="text" id="p-name" class="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm focus:border-primary outline-none" placeholder="e.g. GPT-4 Turbo">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-500 mb-1">Provider Type</label>
-                            <select id="p-provider" class="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm focus:border-primary outline-none">
-                                <option value="openai">OpenAI Compatible</option>
-                                <option value="openrouter">OpenRouter</option>
-                                <option value="anthropic">Anthropic (Coming Soon)</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="grid grid-cols-2 gap-4">
-                         <div>
-                            <label class="block text-xs font-semibold text-slate-500 mb-1">Model ID</label>
-                            <input type="text" id="p-model" class="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm focus:border-primary outline-none" placeholder="e.g. gpt-4-turbo">
-                        </div>
-                        <div>
-                             <label class="block text-xs font-semibold text-slate-500 mb-1">Max Context (Msgs)</label>
-                             <input type="number" id="p-context" value="10" min="2" max="50" class="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm focus:border-primary outline-none">
-                        </div>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-500 mb-1">API Key</label>
-                        <input type="password" id="p-key" class="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm focus:border-primary outline-none" placeholder="sk-...">
-                    </div>
-                    <div>
-                         <label class="block text-xs font-semibold text-slate-500 mb-1">Base URL</label>
-                         <input type="text" id="p-url" class="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm focus:border-primary outline-none" placeholder="https://api.openai.com/v1">
-                    </div>
-                    <button onclick="Nexus.settings.addProfile()" class="w-full py-2.5 bg-slate-800 hover:bg-slate-900 text-white text-sm font-bold rounded-lg shadow-md transition-all">Save Profile</button>
-                </div>
-
-                <div>
-                    <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Saved Profiles</h4>
-                    <div id="settings-profile-list" class="space-y-2"></div>
-                </div>
-            </div>
-        </div>
+    <div id="loading" class="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-white dark:bg-gray-950">
+        <div class="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+        <p class="text-gray-600 dark:text-gray-300 font-medium">Loading Workspace...</p>
     </div>
 
-    <div id="toast" class="fixed bottom-5 left-1/2 -translate-x-1/2 bg-slate-800 text-white px-4 py-2 rounded-full text-sm font-medium shadow-lg transform translate-y-20 opacity-0 transition-all duration-300 z-50 flex items-center gap-2">
-        <i class="ph-bold ph-info"></i>
-        <span id="toast-msg">Notification</span>
+    <div id="app" class="hidden flex-1 flex w-full min-h-screen relative">
+        
+        <aside id="sidebar" class="fixed inset-y-0 left-0 z-40 w-72 bg-gray-100 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 transform -translate-x-full md:relative md:translate-x-0 transition-transform duration-300 flex flex-col">
+            <div class="p-4 flex items-center justify-between border-b border-gray-200 dark:border-gray-800">
+                <button id="new-chat-btn" class="flex-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-100 px-4 py-2.5 rounded-xl font-medium flex items-center justify-center gap-2 transition-colors shadow-sm">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                    New Chat
+                </button>
+                <button id="close-sidebar-btn" class="md:hidden ml-2 p-2 text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-lg">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            
+            <div class="flex-1 overflow-y-auto p-3 space-y-1" id="chat-list">
+                </div>
+
+            <div class="p-4 border-t border-gray-200 dark:border-gray-800">
+                <button id="open-settings-btn" class="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-lg transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                    Settings
+                </button>
+            </div>
+        </aside>
+
+        <div id="sidebar-overlay" class="fixed inset-0 bg-black/50 z-30 hidden md:hidden transition-opacity"></div>
+
+        <main class="flex-1 flex flex-col min-w-0 h-full relative">
+            
+            <header class="sticky top-0 z-20 flex items-center justify-between px-4 h-14 bg-white/80 dark:bg-gray-950/80 backdrop-blur border-b border-gray-200 dark:border-gray-800">
+                <div class="flex items-center gap-3">
+                    <button id="open-sidebar-btn" class="md:hidden p-2 -ml-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                    </button>
+                    <h1 class="font-semibold text-lg tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400">Universal AI</h1>
+                </div>
+                <button id="theme-toggle" class="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors" title="Toggle Dark Mode">
+                    <svg id="theme-icon-dark" class="w-5 h-5 hidden dark:block text-yellow-300" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4.22 4.22a1 1 0 011.415 0l.708.707a1 1 0 01-1.414 1.414l-.707-.707a1 1 0 010-1.414zM18 10a1 1 0 01-1 1h-1a1 1 0 110-2h1a1 1 0 011 1zM14.95 15.657a1 1 0 00-1.414-1.414l-.707.707a1 1 0 001.414 1.414l.707-.707zM10 18a1 1 0 01-1-1v-1a1 1 0 112 0v1a1 1 0 01-1 1zm-4.22-4.22a1 1 0 00-1.415 0l-.708.707a1 1 0 001.414 1.414l.707-.707a1 1 0 000-1.414zM2 10a1 1 0 011-1h1a1 1 0 110 2H3a1 1 0 01-1-1zm3.05-5.657a1 1 0 011.414 1.414l-.707.707a1 1 0 01-1.414-1.414l.707-.707zM10 5a5 5 0 100 10 5 5 0 000-10z"></path></svg>
+                    <svg id="theme-icon-light" class="w-5 h-5 block dark:hidden text-gray-600" fill="currentColor" viewBox="0 0 20 20"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path></svg>
+                </button>
+            </header>
+
+            <div id="chat-container" class="flex-1 w-full max-w-4xl mx-auto p-4 md:p-6 pb-28 space-y-8 overflow-y-auto">
+                <div id="welcome-screen" class="flex flex-col items-center justify-center h-full text-center mt-10 space-y-4">
+                    <div class="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/20">
+                        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                    </div>
+                    <h2 class="text-2xl font-semibold bg-clip-text text-transparent bg-gradient-to-r from-gray-800 to-gray-500 dark:from-gray-100 dark:to-gray-400">How can I help you today?</h2>
+                    <p class="text-gray-500 dark:text-gray-400 max-w-md">Access state-of-the-art models via OpenRouter. Enter your API key in settings to begin.</p>
+                </div>
+                </div>
+
+            <div class="sticky bottom-0 w-full z-10 bg-gradient-to-t from-gray-50 via-gray-50 to-transparent dark:from-gray-950 dark:via-gray-950 pt-8 pb-4 px-4 md:px-8">
+                <div class="max-w-4xl mx-auto relative bg-white dark:bg-gray-850 rounded-3xl shadow-[0_0_20px_rgba(0,0,0,0.05)] dark:shadow-[0_0_20px_rgba(0,0,0,0.3)] border border-gray-200 dark:border-gray-700 flex items-end p-2 transition-colors duration-200">
+                    <textarea id="user-input" rows="1" class="w-full resize-none bg-transparent outline-none max-h-40 overflow-y-auto py-3 px-4 text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 text-base" placeholder="Message AI..."></textarea>
+                    <button id="send-btn" class="p-3 mb-1 mr-1 rounded-full bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0 flex items-center justify-center shadow-sm">
+                        <svg class="w-5 h-5 translate-x-px -translate-y-px" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+                    </button>
+                </div>
+                <div class="text-center mt-2 text-xs text-gray-400 dark:text-gray-500">
+                    AI can make mistakes. Consider verifying important information.
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <div id="settings-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm hidden opacity-0 transition-opacity duration-300">
+        <div class="bg-white dark:bg-gray-900 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden transform scale-95 transition-transform duration-300">
+            <div class="flex items-center justify-between p-5 border-b border-gray-200 dark:border-gray-800">
+                <h3 class="text-xl font-semibold">Settings</h3>
+                <button id="close-settings-btn" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            <div class="p-5 space-y-5">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">OpenRouter API Key</label>
+                    <input type="password" id="api-key-input" placeholder="sk-or-v1-..." class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-gray-800 dark:text-gray-100 transition-colors">
+                    <p class="text-xs text-gray-500 mt-1">Stored securely in your browser's local storage.</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Model Name</label>
+                    <input type="text" id="model-input" placeholder="deepseek/deepseek-r1:free" class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-gray-800 dark:text-gray-100 transition-colors">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">System Prompt</label>
+                    <textarea id="system-prompt-input" rows="3" class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-gray-800 dark:text-gray-100 resize-none transition-colors" placeholder="You are a helpful AI assistant."></textarea>
+                </div>
+            </div>
+            <div class="p-5 border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-850 flex justify-end">
+                <button id="save-settings-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-xl font-medium transition-colors shadow-sm">Save Preferences</button>
+            </div>
+        </div>
     </div>
 
     <script>
-        /**
-         * NEXUS PRO - MODULAR ARCHITECTURE
-         * Implements Module Pattern, Security Obfuscation, AbortController, and Smart Context.
-         */
-        const Nexus = (() => {
-            
-            // --- STATE ---
-            const state = {
-                profiles: [],
+        document.addEventListener('DOMContentLoaded', () => {
+            // ==========================================
+            // STATE MANAGEMENT
+            // ==========================================
+            const STATE = {
                 chats: [],
-                activeProfileId: null,
-                activeChatId: null,
-                abortController: null,
-                isGenerating: false,
-                startTime: 0
+                currentChatId: null,
+                settings: {
+                    apiKey: '',
+                    model: 'deepseek/deepseek-r1:free',
+                    systemPrompt: 'You are a helpful and intelligent AI assistant.',
+                    theme: 'system' // 'dark', 'light', 'system'
+                },
+                isGenerating: false
             };
 
-            // --- UTILS (Security & Formatting) ---
-            const Utils = {
-                // Simple XOR + Base64 Obfuscation (Not military grade encryption, but prevents plain text reading)
-                obfuscate: (text) => {
-                    if (!text) return '';
-                    const key = 'nexus-secure';
-                    let result = '';
-                    for (let i = 0; i < text.length; i++) {
-                        result += String.fromCharCode(text.charCodeAt(i) ^ key.charCodeAt(i % key.length));
-                    }
-                    return btoa(result);
-                },
-                deobfuscate: (encoded) => {
-                    if (!encoded) return '';
-                    try {
-                        const text = atob(encoded);
-                        const key = 'nexus-secure';
-                        let result = '';
-                        for (let i = 0; i < text.length; i++) {
-                            result += String.fromCharCode(text.charCodeAt(i) ^ key.charCodeAt(i % key.length));
-                        }
-                        return result;
-                    } catch (e) { return ''; }
-                },
-                generateId: () => Date.now().toString(36) + Math.random().toString(36).substr(2),
-                debounce: (func, wait) => {
-                    let timeout;
-                    return function executedFunction(...args) {
-                        const later = () => { clearTimeout(timeout); func(...args); };
-                        clearTimeout(timeout);
-                        timeout = setTimeout(later, wait);
-                    };
-                },
-                estimateTokens: (text) => Math.ceil(text.length / 4) // Rough approximation
+            // ==========================================
+            // DOM ELEMENTS
+            // ==========================================
+            const DOM = {
+                loading: document.getElementById('loading'),
+                app: document.getElementById('app'),
+                sidebar: document.getElementById('sidebar'),
+                sidebarOverlay: document.getElementById('sidebar-overlay'),
+                chatContainer: document.getElementById('chat-container'),
+                welcomeScreen: document.getElementById('welcome-screen'),
+                chatList: document.getElementById('chat-list'),
+                userInput: document.getElementById('user-input'),
+                sendBtn: document.getElementById('send-btn'),
+                
+                // Buttons
+                newChatBtn: document.getElementById('new-chat-btn'),
+                openSidebarBtn: document.getElementById('open-sidebar-btn'),
+                closeSidebarBtn: document.getElementById('close-sidebar-btn'),
+                themeToggle: document.getElementById('theme-toggle'),
+                openSettingsBtn: document.getElementById('open-settings-btn'),
+                
+                // Modal
+                settingsModal: document.getElementById('settings-modal'),
+                closeSettingsBtn: document.getElementById('close-settings-btn'),
+                saveSettingsBtn: document.getElementById('save-settings-btn'),
+                apiKeyInput: document.getElementById('api-key-input'),
+                modelInput: document.getElementById('model-input'),
+                systemPromptInput: document.getElementById('system-prompt-input'),
             };
 
-            // --- DATA LAYER ---
-            const Data = {
-                save: () => {
-                    // Encrypt profiles before saving
-                    const safeProfiles = state.profiles.map(p => ({
-                        ...p,
-                        key: Utils.obfuscate(p.key) // Store obfuscated key
-                    }));
-                    
-                    localStorage.setItem('nexus_profiles', JSON.stringify(safeProfiles));
-                    // Don't encrypt chats for performance, unless requested
-                    localStorage.setItem('nexus_chats', JSON.stringify(state.chats)); 
-                    localStorage.setItem('nexus_meta', JSON.stringify({
-                        activeProfileId: state.activeProfileId
-                    }));
-                },
-                load: () => {
-                    const profiles = JSON.parse(localStorage.getItem('nexus_profiles') || '[]');
-                    state.profiles = profiles.map(p => ({
-                        ...p,
-                        key: Utils.deobfuscate(p.key) // Restore key to memory
-                    }));
-                    
-                    state.chats = JSON.parse(localStorage.getItem('nexus_chats') || '[]');
-                    const meta = JSON.parse(localStorage.getItem('nexus_meta') || '{}');
-                    state.activeProfileId = meta.activeProfileId;
-
-                    if (state.profiles.length > 0 && !state.profiles.find(p => p.id === state.activeProfileId)) {
-                        state.activeProfileId = state.profiles[0].id;
+            // ==========================================
+            // INITIALIZATION
+            // ==========================================
+            function init() {
+                loadData();
+                applyTheme();
+                
+                if (STATE.chats.length === 0) {
+                    createNewChat();
+                } else {
+                    if (!STATE.chats.find(c => c.id === STATE.currentChatId)) {
+                        STATE.currentChatId = STATE.chats[0].id;
                     }
+                    renderChatList();
+                    renderMessages();
                 }
-            };
 
-            // --- UI RENDERER ---
-            const UI = {
-                dom: {
-                    input: document.getElementById('user-input'),
-                    chat: document.getElementById('chat-view'),
-                    history: document.getElementById('history-list'),
-                    welcome: document.getElementById('welcome-state'),
-                    modelName: document.getElementById('header-model-name'),
-                    apiList: document.getElementById('api-list'),
-                    settingsList: document.getElementById('settings-profile-list'),
-                    tokenCount: document.getElementById('token-count'),
-                    latency: document.getElementById('latency-meter'),
-                    stopBtn: document.getElementById('stop-btn-container')
-                },
+                setupEventListeners();
 
-                toast: (msg, type = 'info') => {
-                    const t = document.getElementById('toast');
-                    const icon = t.querySelector('i');
-                    document.getElementById('toast-msg').innerText = msg;
-                    t.className = `fixed bottom-5 left-1/2 -translate-x-1/2 px-4 py-2 rounded-full text-sm font-medium shadow-lg transform transition-all duration-300 z-50 flex items-center gap-2 ${type === 'error' ? 'bg-red-600 text-white' : 'bg-slate-800 text-white'}`;
-                    icon.className = type === 'error' ? 'ph-bold ph-warning-circle' : 'ph-bold ph-check-circle';
+                // Configure marked.js options for safety and formatting
+                marked.setOptions({
+                    breaks: true,
+                    gfm: true
+                });
+
+                // Remove loader
+                setTimeout(() => {
+                    DOM.loading.style.display = 'none';
+                    DOM.app.classList.remove('hidden');
+                    adjustTextareaHeight();
+                }, 300);
+            }
+
+            // ==========================================
+            // UTILITIES
+            // ==========================================
+            function generateId() {
+                return (typeof crypto !== 'undefined' && crypto.randomUUID) 
+                    ? crypto.randomUUID() 
+                    : 'id-' + Date.now().toString(36) + Math.random().toString(36).substr(2);
+            }
+
+            function loadData() {
+                try {
+                    const savedSettings = localStorage.getItem('ai_settings');
+                    if (savedSettings) STATE.settings = { ...STATE.settings, ...JSON.parse(savedSettings) };
                     
-                    t.classList.remove('translate-y-20', 'opacity-0');
-                    setTimeout(() => t.classList.add('translate-y-20', 'opacity-0'), 3000);
-                },
+                    const savedChats = localStorage.getItem('ai_chats');
+                    if (savedChats) STATE.chats = JSON.parse(savedChats);
+                    
+                    const savedCurrentChat = localStorage.getItem('ai_current_chat');
+                    if (savedCurrentChat) STATE.currentChatId = savedCurrentChat;
+                } catch (e) {
+                    console.error("Failed to load data from localStorage", e);
+                }
+            }
 
-                autoResize: (el) => {
-                    el.style.height = 'auto';
-                    el.style.height = el.scrollHeight + 'px';
-                },
+            function saveData() {
+                try {
+                    localStorage.setItem('ai_settings', JSON.stringify(STATE.settings));
+                    localStorage.setItem('ai_chats', JSON.stringify(STATE.chats));
+                    localStorage.setItem('ai_current_chat', STATE.currentChatId);
+                } catch (e) {
+                    console.error("Failed to save data to localStorage", e);
+                }
+            }
 
-                scrollToBottom: Utils.debounce(() => {
-                    const container = document.getElementById('chat-view');
-                    container.scrollTop = container.scrollHeight;
-                }, 50),
+            // ==========================================
+            // THEME MANAGEMENT
+            // ==========================================
+            function applyTheme() {
+                const isDark = STATE.settings.theme === 'dark' || 
+                    (STATE.settings.theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+                
+                if (isDark) {
+                    document.documentElement.classList.add('dark');
+                } else {
+                    document.documentElement.classList.remove('dark');
+                }
+            }
 
-                renderHistory: () => {
-                    UI.dom.history.innerHTML = state.chats.map(chat => `
-                        <div onclick="Nexus.chat.load('${chat.id}')" class="group flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all border border-transparent ${state.activeChatId === chat.id ? 'bg-white border-slate-200 shadow-sm text-primary' : 'text-slate-600 hover:bg-slate-100'}">
-                            <i class="ph ${state.activeChatId === chat.id ? 'ph-chat-circle-dots' : 'ph-chat-circle'} text-lg"></i>
-                            <div class="flex-1 truncate text-sm font-medium">${chat.title}</div>
-                            <button onclick="Nexus.chat.delete(event, '${chat.id}')" class="text-slate-400 opacity-0 group-hover:opacity-100 hover:text-red-500 hover:bg-red-50 p-1 rounded transition-all"><i class="ph-bold ph-trash"></i></button>
+            function toggleTheme() {
+                const isCurrentlyDark = document.documentElement.classList.contains('dark');
+                STATE.settings.theme = isCurrentlyDark ? 'light' : 'dark';
+                applyTheme();
+                saveData();
+            }
+
+            // ==========================================
+            // CHAT MANAGEMENT
+            // ==========================================
+            function createNewChat() {
+                const newChat = {
+                    id: generateId(),
+                    title: 'New Chat',
+                    messages: []
+                };
+                STATE.chats.unshift(newChat);
+                STATE.currentChatId = newChat.id;
+                saveData();
+                renderChatList();
+                renderMessages();
+                
+                // Close sidebar on mobile after new chat
+                if (window.innerWidth < 768) toggleSidebar(false);
+            }
+
+            function getCurrentChat() {
+                return STATE.chats.find(c => c.id === STATE.currentChatId);
+            }
+
+            function deleteChat(id, event) {
+                event.stopPropagation();
+                if(!confirm("Are you sure you want to delete this chat?")) return;
+                
+                STATE.chats = STATE.chats.filter(c => c.id !== id);
+                if (STATE.chats.length === 0) {
+                    createNewChat();
+                } else if (STATE.currentChatId === id) {
+                    STATE.currentChatId = STATE.chats[0].id;
+                }
+                saveData();
+                renderChatList();
+                renderMessages();
+            }
+
+            function renameChat(id, event) {
+                event.stopPropagation();
+                const chat = STATE.chats.find(c => c.id === id);
+                if(!chat) return;
+                
+                const newTitle = prompt("Enter new name for this chat:", chat.title);
+                if (newTitle && newTitle.trim() !== '') {
+                    chat.title = newTitle.trim();
+                    saveData();
+                    renderChatList();
+                }
+            }
+
+            function switchChat(id) {
+                if(STATE.isGenerating) return;
+                STATE.currentChatId = id;
+                saveData();
+                renderChatList();
+                renderMessages();
+                if (window.innerWidth < 768) toggleSidebar(false);
+            }
+
+            // ==========================================
+            // RENDERING
+            // ==========================================
+            function renderChatList() {
+                DOM.chatList.innerHTML = '';
+                STATE.chats.forEach(chat => {
+                    const isActive = chat.id === STATE.currentChatId;
+                    const div = document.createElement('div');
+                    
+                    div.className = `group flex items-center justify-between px-3 py-2.5 rounded-xl cursor-pointer transition-colors ${isActive ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' : 'hover:bg-gray-200 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300'}`;
+                    
+                    div.innerHTML = `
+                        <div class="flex items-center gap-3 overflow-hidden flex-1" onclick="window.appAPI.switchChat('${chat.id}')">
+                            <svg class="w-4 h-4 flex-shrink-0 ${isActive ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400'}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path></svg>
+                            <span class="truncate text-sm font-medium select-none">${escapeHTML(chat.title)}</span>
                         </div>
-                    `).join('');
-                },
-
-                renderProfiles: () => {
-                    const active = state.profiles.find(p => p.id === state.activeProfileId);
-                    UI.dom.modelName.innerText = active ? active.name : "Select Model";
-                    
-                    // Header Dropdown
-                    UI.dom.apiList.innerHTML = state.profiles.map(p => `
-                        <button onclick="Nexus.settings.select('${p.id}')" class="w-full text-left px-4 py-2.5 text-sm hover:bg-slate-50 flex items-center justify-between group ${state.activeProfileId === p.id ? 'text-primary bg-blue-50 font-semibold' : 'text-slate-700'}">
-                            <div>
-                                <div class="font-medium group-hover:text-primary transition-colors">${p.name}</div>
-                                <div class="text-[10px] text-slate-400 font-mono">${p.model}</div>
-                            </div>
-                            ${state.activeProfileId === p.id ? '<i class="ph-bold ph-check"></i>' : ''}
-                        </button>
-                    `).join('');
-
-                    // Settings List
-                    UI.dom.settingsList.innerHTML = state.profiles.map(p => `
-                        <div class="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-lg">
-                            <div>
-                                <div class="font-bold text-sm text-slate-800">${p.name}</div>
-                                <div class="text-xs text-slate-500 font-mono">${p.provider} • ${p.model}</div>
-                            </div>
-                            <button onclick="Nexus.settings.delete('${p.id}')" class="text-slate-400 hover:text-red-500 p-2"><i class="ph-bold ph-trash"></i></button>
+                        <div class="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button class="p-1.5 text-gray-400 hover:text-blue-500" onclick="window.appAPI.renameChat('${chat.id}', event)" title="Rename">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                            </button>
+                            <button class="p-1.5 text-gray-400 hover:text-red-500" onclick="window.appAPI.deleteChat('${chat.id}', event)" title="Delete">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                            </button>
                         </div>
-                    `).join('');
-                },
+                    `;
+                    DOM.chatList.appendChild(div);
+                });
+            }
 
-                appendMessage: (role, content) => {
-                    const id = 'msg-' + Utils.generateId();
-                    const isUser = role === 'user';
-                    
-                    const html = `
-                        <div class="flex gap-4 ${isUser ? 'flex-row-reverse' : ''} animate-slide-up group">
-                            <div class="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center ${isUser ? 'bg-primary' : 'bg-white border border-slate-200'} shadow-sm mt-1">
-                                <i class="ph-bold ${isUser ? 'ph-user text-white' : 'ph-lightning text-primary'}"></i>
+            function renderMessages() {
+                const chat = getCurrentChat();
+                if (!chat) return;
+
+                // Clear existing
+                Array.from(DOM.chatContainer.children).forEach(child => {
+                    if (child.id !== 'welcome-screen') child.remove();
+                });
+
+                if (chat.messages.length === 0) {
+                    DOM.welcomeScreen.classList.remove('hidden');
+                } else {
+                    DOM.welcomeScreen.classList.add('hidden');
+                    chat.messages.forEach(msg => {
+                        appendMessageDOM(msg.id, msg.role, msg.content, false);
+                    });
+                    scrollToBottom();
+                }
+            }
+
+            function appendMessageDOM(id, role, content, isGenerating = false) {
+                const div = document.createElement('div');
+                div.id = `msg-${id}`;
+                div.className = `flex w-full animate-fade-in ${role === 'user' ? 'justify-end' : 'justify-start'}`;
+                
+                if (role === 'user') {
+                    div.innerHTML = `
+                        <div class="bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-5 py-3.5 rounded-3xl rounded-tr-sm max-w-[85%] sm:max-w-[75%] shadow-sm whitespace-pre-wrap font-medium">
+                            ${escapeHTML(content)}
+                        </div>
+                    `;
+                } else {
+                    div.innerHTML = `
+                        <div class="flex max-w-full min-w-0 ${isGenerating ? 'generating' : ''}">
+                            <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900/40 dark:to-purple-900/40 flex items-center justify-center mr-4 flex-shrink-0 mt-1 shadow-sm border border-blue-200 dark:border-blue-800/50">
+                                <svg class="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
                             </div>
-                            <div class="max-w-[85%] md:max-w-[75%]">
-                                <div class="prose prose-slate prose-sm ${isUser ? 'bg-primary text-white shadow-lg shadow-blue-500/20' : 'bg-white border border-slate-200 shadow-sm'} px-5 py-3.5 rounded-2xl ${isUser ? 'rounded-tr-sm' : 'rounded-tl-sm'} break-words">
-                                    <div id="${id}">${content ? marked.parse(content) : '<div class="typing-indicator flex gap-1"><span class="w-1.5 h-1.5 bg-slate-400 rounded-full"></span><span class="w-1.5 h-1.5 bg-slate-400 rounded-full"></span><span class="w-1.5 h-1.5 bg-slate-400 rounded-full"></span></div>'}</div>
-                                </div>
-                                ${!isUser ? `<div class="text-[10px] text-slate-400 mt-1 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">AI Generated</div>` : ''}
+                            <div class="message-content prose prose-slate dark:prose-invert max-w-[85%] sm:max-w-[85%] overflow-hidden break-words text-[15px] sm:text-base leading-relaxed">
+                                ${marked.parse(content || '\u200B')}
                             </div>
                         </div>
                     `;
-                    UI.dom.chat.insertAdjacentHTML('beforeend', html);
-                    return id;
-                },
-
-                toggleSidebar: () => document.getElementById('sidebar').classList.toggle('-translate-x-full'),
-                openModal: (id) => document.getElementById(id).classList.remove('hidden'),
-                closeModal: (id) => document.getElementById(id).classList.add('hidden')
-            };
-
-            // --- CORE LOGIC ---
-            const Chat = {
-                newChat: () => {
-                    const chat = { id: Utils.generateId(), title: 'New Conversation', messages: [], timestamp: Date.now() };
-                    state.chats.unshift(chat);
-                    Chat.load(chat.id);
-                    if(window.innerWidth < 768) UI.toggleSidebar();
-                },
+                }
                 
-                load: (id) => {
-                    state.activeChatId = id;
-                    const chat = state.chats.find(c => c.id === id);
-                    if(!chat) return;
+                DOM.chatContainer.appendChild(div);
+            }
 
-                    UI.dom.chat.innerHTML = '';
-                    if (chat.messages.length === 0) UI.dom.welcome.classList.remove('hidden');
-                    else {
-                        UI.dom.welcome.classList.add('hidden');
-                        chat.messages.forEach(m => UI.appendMessage(m.role, m.content));
-                    }
-                    UI.renderHistory();
-                    UI.scrollToBottom();
-                },
-
-                delete: (e, id) => {
-                    e.stopPropagation();
-                    if(confirm("Delete this chat permanently?")) {
-                        state.chats = state.chats.filter(c => c.id !== id);
-                        if(state.activeChatId === id) {
-                            state.activeChatId = null;
-                            state.chats.length > 0 ? Chat.load(state.chats[0].id) : (Chat.newChat(), UI.dom.welcome.classList.remove('hidden'));
-                        } else {
-                            UI.renderHistory();
-                        }
-                        Data.save();
-                    }
-                },
+            function updateMessageDOM(id, content, isGenerating) {
+                const msgEl = document.getElementById(`msg-${id}`);
+                if (!msgEl) return;
                 
-                clearContext: () => {
-                     const chat = state.chats.find(c => c.id === state.activeChatId);
-                     if(chat) {
-                         chat.messages = [];
-                         Chat.load(chat.id);
-                         Data.save();
-                     }
-                },
+                const contentEl = msgEl.querySelector('.message-content');
+                if(contentEl) {
+                    contentEl.innerHTML = marked.parse(content || '\u200B');
+                }
+                
+                const wrapper = msgEl.querySelector('.flex.max-w-full');
+                if (wrapper) {
+                    if (isGenerating) wrapper.classList.add('generating');
+                    else wrapper.classList.remove('generating');
+                }
+            }
 
-                abortGeneration: () => {
-                    if (state.abortController) {
-                        state.abortController.abort();
-                        state.abortController = null;
-                        state.isGenerating = false;
-                        UI.dom.stopBtn.classList.add('hidden');
-                        document.getElementById('send-btn').disabled = false;
-                        UI.toast("Generation stopped", "info");
+            // ==========================================
+            // LOGIC & API STREAMING
+            // ==========================================
+            async function sendMessage() {
+                if (STATE.isGenerating) return;
+                
+                const text = DOM.userInput.value.trim();
+                if (!text) return;
+                
+                if (!STATE.settings.apiKey) {
+                    alert("Please enter your OpenRouter API Key in Settings first.");
+                    openSettings();
+                    return;
+                }
+
+                DOM.userInput.value = '';
+                adjustTextareaHeight();
+                DOM.welcomeScreen.classList.add('hidden');
+
+                const chat = getCurrentChat();
+                
+                // Add User Message
+                const userMsg = { id: generateId(), role: 'user', content: text };
+                chat.messages.push(userMsg);
+                appendMessageDOM(userMsg.id, 'user', text);
+                
+                // Add Assistant Placeholder
+                const aiMsgId = generateId();
+                const aiMsg = { id: aiMsgId, role: 'assistant', content: '' };
+                chat.messages.push(aiMsg);
+                appendMessageDOM(aiMsgId, 'assistant', '', true);
+                
+                scrollToBottom();
+
+                // Auto-generate title if it's the first message
+                if (chat.messages.length === 2 && chat.title === 'New Chat') {
+                    chat.title = text.length > 30 ? text.substring(0, 30) + '...' : text;
+                    renderChatList();
+                }
+
+                STATE.isGenerating = true;
+                updateUIState();
+
+                try {
+                    const apiMessages = [
+                        { role: 'system', content: STATE.settings.systemPrompt },
+                        ...chat.messages.slice(0, -1).map(m => ({ role: m.role, content: m.content }))
+                    ];
+
+                    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${STATE.settings.apiKey}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            model: STATE.settings.model || 'deepseek/deepseek-r1:free',
+                            messages: apiMessages,
+                            stream: true
+                        })
+                    });
+
+                    if (!response.ok) {
+                        const err = await response.json();
+                        throw new Error(err.error?.message || `HTTP Error ${response.status}`);
                     }
-                },
 
-                sendMessage: async () => {
-                    const text = UI.dom.input.value.trim();
-                    if (!text || state.isGenerating) return;
+                    await processStream(response.body.getReader(), aiMsgId);
+                } catch (error) {
+                    console.error("API Error:", error);
+                    const errorText = `**Error:** ${error.message}\n\nPlease check your API key and network connection.`;
+                    aiMsg.content = errorText;
+                    updateMessageDOM(aiMsgId, errorText, false);
+                } finally {
+                    STATE.isGenerating = false;
+                    updateUIState();
+                    updateMessageDOM(aiMsgId, aiMsg.content, false); // Remove generating cursor
+                    saveData();
+                }
+            }
 
-                    const profile = state.profiles.find(p => p.id === state.activeProfileId);
-                    if (!profile) return UI.toast("Please select a profile first", "error");
+            async function processStream(reader, messageId) {
+                const decoder = new TextDecoder('utf-8');
+                const chat = getCurrentChat();
+                const aiMsg = chat.messages.find(m => m.id === messageId);
+                let buffer = "";
 
-                    // 1. Prepare UI
-                    UI.dom.input.value = '';
-                    UI.dom.input.style.height = 'auto';
-                    UI.dom.welcome.classList.add('hidden');
-                    UI.dom.stopBtn.classList.remove('hidden');
-                    document.getElementById('send-btn').disabled = true;
-                    state.isGenerating = true;
-                    state.startTime = Date.now();
+                // Scroll state vars
+                let lastScrollTop = window.scrollY || document.documentElement.scrollTop;
+                let isUserScrollingUp = false;
 
-                    // 2. Add User Message
-                    const currentChat = state.chats.find(c => c.id === state.activeChatId);
-                    currentChat.messages.push({ role: 'user', content: text });
-                    if (currentChat.messages.length === 1) currentChat.title = text.slice(0, 30) + '...';
-                    
-                    UI.appendMessage('user', text);
-                    const assistantMsgId = UI.appendMessage('assistant', null);
-                    const msgDiv = document.getElementById(assistantMsgId);
-                    
-                    UI.renderHistory();
-                    UI.scrollToBottom();
+                // Watch for user scroll
+                const scrollHandler = () => {
+                    const currentScroll = window.scrollY || document.documentElement.scrollTop;
+                    if (currentScroll < lastScrollTop - 10) {
+                        isUserScrollingUp = true;
+                    }
+                    lastScrollTop = currentScroll;
+                };
+                window.addEventListener('scroll', scrollHandler, { passive: true });
 
-                    // 3. Smart Context Management (Slice history based on profile settings)
-                    const limit = parseInt(profile.contextLimit) || 10;
-                    const contextMessages = currentChat.messages.slice(-(limit + 1)); // Keep last N + current
-                    
-                    // Update Token Estimate
-                    const estimatedTokens = contextMessages.reduce((acc, m) => acc + Utils.estimateTokens(m.content), 0);
-                    UI.dom.tokenCount.innerText = `~${estimatedTokens}`;
+                try {
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
 
-                    // 4. API Call
-                    state.abortController = new AbortController();
-                    
-                    try {
-                        const response = await fetch(`${profile.baseUrl}/chat/completions`, {
-                            method: 'POST',
-                            headers: {
-                                'Authorization': `Bearer ${profile.key}`,
-                                'HTTP-Referer': window.location.href,
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify({
-                                model: profile.model,
-                                messages: contextMessages,
-                                stream: true
-                            }),
-                            signal: state.abortController.signal
-                        });
+                        buffer += decoder.decode(value, { stream: true });
+                        const lines = buffer.split('\n');
+                        buffer = lines.pop(); // Keep incomplete line
 
-                        if (!response.ok) throw new Error(`API Error: ${response.status}`);
+                        for (const line of lines) {
+                            const trimmed = line.trim();
+                            if (!trimmed || trimmed.startsWith(':')) continue;
+                            if (trimmed === 'data: [DONE]') return;
 
-                        const reader = response.body.getReader();
-                        const decoder = new TextDecoder();
-                        let fullResponse = "";
-                        let firstChunk = true;
-
-                        while (true) {
-                            const { done, value } = await reader.read();
-                            if (done) break;
-
-                            const chunk = decoder.decode(value);
-                            const lines = chunk.split('\n');
-
-                            for (const line of lines) {
-                                if (line.startsWith('data: ') && line !== 'data: [DONE]') {
-                                    try {
-                                        const data = JSON.parse(line.slice(6));
-                                        const content = data.choices[0]?.delta?.content || "";
-                                        fullResponse += content;
+                            if (trimmed.startsWith('data: ')) {
+                                const dataStr = trimmed.slice(6);
+                                try {
+                                    const parsed = JSON.parse(dataStr);
+                                    const content = parsed.choices[0]?.delta?.content || "";
+                                    
+                                    if (content) {
+                                        aiMsg.content += content;
+                                        updateMessageDOM(messageId, aiMsg.content, true);
                                         
-                                        if (firstChunk) {
-                                            const latency = Date.now() - state.startTime;
-                                            UI.dom.latency.innerText = `Lat: ${latency}ms`;
-                                            firstChunk = false;
+                                        // Auto-scroll logic if user hasn't scrolled up manually
+                                        if (!isUserScrollingUp) {
+                                            scrollToBottom();
                                         }
-
-                                        msgDiv.innerHTML = marked.parse(fullResponse);
-                                        UI.scrollToBottom();
-                                    } catch (e) {}
+                                    }
+                                } catch (e) {
+                                    // Silent ignore parsing errors for partial JSON in chunks
                                 }
                             }
                         }
-
-                        currentChat.messages.push({ role: 'assistant', content: fullResponse });
-                        msgDiv.querySelectorAll('pre code').forEach(block => hljs.highlightElement(block));
-                        Data.save();
-
-                    } catch (error) {
-                        if (error.name !== 'AbortError') {
-                            msgDiv.innerHTML = `<div class="text-red-500 bg-red-50 p-3 rounded-lg border border-red-200 text-xs">❌ Connection Error: ${error.message}</div>`;
-                            UI.toast(error.message, 'error');
-                        }
-                    } finally {
-                        state.isGenerating = false;
-                        state.abortController = null;
-                        UI.dom.stopBtn.classList.add('hidden');
-                        document.getElementById('send-btn').disabled = false;
                     }
+                } finally {
+                    window.removeEventListener('scroll', scrollHandler);
                 }
-            };
+            }
 
-            // --- SETTINGS ---
-            const Settings = {
-                addProfile: () => {
-                    const name = document.getElementById('p-name').value.trim();
-                    const key = document.getElementById('p-key').value.trim();
-                    const model = document.getElementById('p-model').value.trim();
-                    const provider = document.getElementById('p-provider').value;
-                    const context = document.getElementById('p-context').value;
-                    let url = document.getElementById('p-url').value.trim();
-
-                    if (!name || !key || !model) return UI.toast("Fill required fields", 'error');
-                    if (!url) url = provider === 'openrouter' ? 'https://openrouter.ai/api/v1' : 'https://api.openai.com/v1';
-
-                    const newProfile = { id: Utils.generateId(), name, key, model, provider, baseUrl: url, contextLimit: context };
-                    state.profiles.push(newProfile);
-                    state.activeProfileId = newProfile.id;
-                    
-                    // Clear form
-                    ['p-name', 'p-key', 'p-model'].forEach(id => document.getElementById(id).value = '');
-                    
-                    Data.save();
-                    UI.renderProfiles();
-                    UI.toast("Profile Saved");
-                },
-                delete: (id) => {
-                    if(!confirm("Remove this profile?")) return;
-                    state.profiles = state.profiles.filter(p => p.id !== id);
-                    if(state.activeProfileId === id) state.activeProfileId = state.profiles[0]?.id || null;
-                    Data.save();
-                    UI.renderProfiles();
-                },
-                select: (id) => {
-                    state.activeProfileId = id;
-                    Data.save();
-                    UI.renderProfiles();
-                    document.getElementById('api-dropdown').classList.add('hidden');
+            // ==========================================
+            // UI INTERACTION & HELPERS
+            // ==========================================
+            function toggleSidebar(forceState) {
+                const isOpen = typeof forceState === 'boolean' ? forceState : DOM.sidebar.classList.contains('-translate-x-full');
+                if (isOpen) {
+                    DOM.sidebar.classList.remove('-translate-x-full');
+                    DOM.sidebarOverlay.classList.remove('hidden');
+                    setTimeout(() => DOM.sidebarOverlay.classList.remove('opacity-0'), 10);
+                } else {
+                    DOM.sidebar.classList.add('-translate-x-full');
+                    DOM.sidebarOverlay.classList.add('opacity-0');
+                    setTimeout(() => DOM.sidebarOverlay.classList.add('hidden'), 300);
                 }
-            };
+            }
 
-            // --- INIT ---
-            const init = () => {
-                Data.load();
+            function openSettings() {
+                DOM.apiKeyInput.value = STATE.settings.apiKey;
+                DOM.modelInput.value = STATE.settings.model;
+                DOM.systemPromptInput.value = STATE.settings.systemPrompt;
                 
-                if (state.profiles.length === 0) UI.openModal('settings-modal');
-                else UI.renderProfiles();
+                DOM.settingsModal.classList.remove('hidden');
+                // Trigger reflow
+                void DOM.settingsModal.offsetWidth;
+                DOM.settingsModal.classList.remove('opacity-0');
+                DOM.settingsModal.querySelector('div').classList.remove('scale-95');
+            }
 
-                if (state.chats.length === 0) Chat.newChat();
-                else Chat.load(state.chats[0].id);
+            function closeSettings() {
+                DOM.settingsModal.classList.add('opacity-0');
+                DOM.settingsModal.querySelector('div').classList.add('scale-95');
+                setTimeout(() => DOM.settingsModal.classList.add('hidden'), 300);
+            }
 
-                // Event Listeners
-                UI.dom.input.addEventListener('keydown', e => {
-                    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); Chat.sendMessage(); }
+            function saveSettings() {
+                STATE.settings.apiKey = DOM.apiKeyInput.value.trim();
+                STATE.settings.model = DOM.modelInput.value.trim() || 'deepseek/deepseek-r1:free';
+                STATE.settings.systemPrompt = DOM.systemPromptInput.value.trim();
+                saveData();
+                closeSettings();
+            }
+
+            function adjustTextareaHeight() {
+                DOM.userInput.style.height = 'auto';
+                DOM.userInput.style.height = (DOM.userInput.scrollHeight) + 'px';
+            }
+
+            function updateUIState() {
+                DOM.sendBtn.disabled = STATE.isGenerating || DOM.userInput.value.trim() === '';
+                DOM.sendBtn.innerHTML = STATE.isGenerating 
+                    ? `<svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>`
+                    : `<svg class="w-5 h-5 translate-x-px -translate-y-px" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>`;
+            }
+
+            function scrollToBottom() {
+                // Because of our layout, scrolling the window/document body handles the scroll
+                window.scrollTo({
+                    top: document.documentElement.scrollHeight,
+                    behavior: 'smooth'
+                });
+            }
+
+            function escapeHTML(str) {
+                return str.replace(/[&<>'"]/g, 
+                    tag => ({
+                        '&': '&amp;',
+                        '<': '&lt;',
+                        '>': '&gt;',
+                        "'": '&#39;',
+                        '"': '&quot;'
+                    }[tag] || tag)
+                );
+            }
+
+            // ==========================================
+            // EVENT LISTENERS BINDING
+            // ==========================================
+            function setupEventListeners() {
+                DOM.newChatBtn.addEventListener('click', createNewChat);
+                DOM.openSidebarBtn.addEventListener('click', () => toggleSidebar(true));
+                DOM.closeSidebarBtn.addEventListener('click', () => toggleSidebar(false));
+                DOM.sidebarOverlay.addEventListener('click', () => toggleSidebar(false));
+                DOM.themeToggle.addEventListener('click', toggleTheme);
+                DOM.openSettingsBtn.addEventListener('click', openSettings);
+                DOM.closeSettingsBtn.addEventListener('click', closeSettings);
+                DOM.saveSettingsBtn.addEventListener('click', saveSettings);
+                DOM.sendBtn.addEventListener('click', sendMessage);
+
+                // Textarea auto-resize and Enter to send
+                DOM.userInput.addEventListener('input', () => {
+                    adjustTextareaHeight();
+                    updateUIState();
                 });
 
-                document.addEventListener('click', e => {
-                    const dd = document.getElementById('api-dropdown');
-                    const btn = document.getElementById('api-selector-container');
-                    if (!btn.contains(e.target)) dd.classList.add('hidden');
+                DOM.userInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        sendMessage();
+                    }
                 });
-            };
 
-            return { init, chat: Chat, settings: Settings, ui: UI };
+                // Global API binding for inline HTML handlers
+                window.appAPI = { switchChat, deleteChat, renameChat };
+            }
 
-        })();
-
-        // Start App
-        window.addEventListener('DOMContentLoaded', Nexus.init);
-
+            // BOOT
+            init();
+        });
     </script>
 </body>
 </html>
